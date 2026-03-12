@@ -11,6 +11,8 @@
 
 #include <Arduino.h>
 
+#include "SyslogReporter.h"
+
 // Log levels
 
 #define LOG_LEVEL_VERBOSE 5
@@ -45,16 +47,32 @@
 #define LOGD_TAG _LOG_TAG("D")
 #define LOGV_TAG _LOG_TAG("V")
 
-#define _CONSOLE_LOG(...) console::Console::getInstance().log(__VA_ARGS__)
-#define _CONSOLE_FORMAT(...) console::Console::getInstance().format(__VA_ARGS__)
-#define _CONSOLE_FLUSH(...) console::Console::getInstance().flush(__VA_ARGS__)
+#define _CONSOLE_LOG(level, ...) \
+do { \
+    console::SyslogReporter::getInstance().send(level, __VA_ARGS__); \
+    console::Console::getInstance().log(__VA_ARGS__); \
+} while (false)
+
+#define _CONSOLE_FORMAT(level, ...) \
+do { \
+    console::Console::getInstance().format(__VA_ARGS__); \
+} while(false)
+
+#define _CONSOLE_FLUSH(level, ...) \
+do { \
+    console::SyslogReporter::getInstance().send( \
+        level, console::Console::getInstance().getMessage()); \
+    console::Console::getInstance().flush(__VA_ARGS__); \
+} while(false)
+
+#define _TEST_LOG(...) console::Console::getInstance().log(__VA_ARGS__)
 
 // Conditional logging macros
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
-#define LOGE(...) _CONSOLE_LOG(LOGE_TAG " " __VA_ARGS__)
-#define LOGE_ADD(...) _CONSOLE_FORMAT(__VA_ARGS__)
-#define LOGE_FLUSH() _CONSOLE_FLUSH(LOGE_TAG " ")
+#define LOGE(...) _CONSOLE_LOG(LOG_LEVEL_ERROR, LOGE_TAG " " __VA_ARGS__)
+#define LOGE_ADD(...) _CONSOLE_FORMAT(LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOGE_FLUSH() _CONSOLE_FLUSH(LOG_LEVEL_ERROR, LOGE_TAG " ")
 #else
 #define LOGE(...) ((void)0)
 #define LOGE_ADD(...) ((void)0)
@@ -62,9 +80,9 @@
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOGW(...) _CONSOLE_LOG(LOGW_TAG " " __VA_ARGS__)
-#define LOGW_ADD(...) _CONSOLE_FORMAT(__VA_ARGS__)
-#define LOGW_FLUSH() _CONSOLE_FLUSH(LOGW_TAG " ")
+#define LOGW(...) _CONSOLE_LOG(LOG_LEVEL_WARNING, LOGW_TAG " " __VA_ARGS__)
+#define LOGW_ADD(...) _CONSOLE_FORMAT(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define LOGW_FLUSH() _CONSOLE_FLUSH(LOG_LEVEL_WARNING, LOGW_TAG " ")
 #else
 #define LOGW(...) ((void)0)
 #define LOGW_ADD(...) ((void)0)
@@ -72,9 +90,9 @@
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOGI(...) _CONSOLE_LOG(LOGI_TAG " " __VA_ARGS__)
-#define LOGI_ADD(...) _CONSOLE_FORMAT(__VA_ARGS__)
-#define LOGI_FLUSH() _CONSOLE_FLUSH(LOGI_TAG " ")
+#define LOGI(...) _CONSOLE_LOG(LOG_LEVEL_INFO, LOGI_TAG " " __VA_ARGS__)
+#define LOGI_ADD(...) _CONSOLE_FORMAT(LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOGI_FLUSH() _CONSOLE_FLUSH(LOG_LEVEL_INFO, LOGI_TAG " ")
 #else
 #define LOGI(...) ((void)0)
 #define LOGI_ADD(...) ((void)0)
@@ -82,9 +100,9 @@
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOGD(...) _CONSOLE_LOG(LOGD_TAG " " __VA_ARGS__)
-#define LOGD_ADD(...) _CONSOLE_FORMAT(__VA_ARGS__)
-#define LOGD_FLUSH() _CONSOLE_FLUSH(LOGD_TAG " ")
+#define LOGD(...) _CONSOLE_LOG(LOG_LEVEL_DEBUG, LOGD_TAG " " __VA_ARGS__)
+#define LOGD_ADD(...) _CONSOLE_FORMAT(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOGD_FLUSH() _CONSOLE_FLUSH(LOG_LEVEL_DEBUG, LOGD_TAG " ")
 #else
 #define LOGD(...) ((void)0)
 #define LOGD_ADD(...) ((void)0)
@@ -92,9 +110,9 @@
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOGV(...) _CONSOLE_LOG(LOGV_TAG " " __VA_ARGS__)
-#define LOGV_ADD(...) _CONSOLE_FORMAT(__VA_ARGS__)
-#define LOGV_FLUSH() _CONSOLE_FLUSH(LOGV_TAG " ")
+#define LOGV(...) _CONSOLE_LOG(LOG_LEVEL_VERBOSE, LOGV_TAG " " __VA_ARGS__)
+#define LOGV_ADD(...) _CONSOLE_FORMAT(LOG_LEVEL_VERBOSE, __VA_ARGS__)
+#define LOGV_FLUSH() _CONSOLE_FLUSH(LOG_LEVEL_VERBOSE, LOGV_TAG " ")
 #else
 #define LOGV(...) ((void)0)
 #define LOGV_ADD(...) ((void)0)
@@ -104,9 +122,9 @@
 // Backward compatibility
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG(...) _CONSOLE_LOG(LOGI_TAG " " __VA_ARGS__)
-#define LOG_ADD(...) _CONSOLE_FORMAT(__VA_ARGS__)
-#define LOG_FLUSH() _CONSOLE_FLUSH(LOGI_TAG " ")
+#define LOG(...) _CONSOLE_LOG(LOG_LEVEL_INFO, LOGI_TAG " " __VA_ARGS__)
+#define LOG_ADD(...) _CONSOLE_FORMAT(LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOG_FLUSH() _CONSOLE_FLUSH(LOG_LEVEL_INFO, LOGI_TAG " ")
 #else
 #define LOG(...) ((void)0)
 #define LOG_ADD(...) ((void)0)
@@ -115,7 +133,10 @@
 
 // Test environment
 
-#define TEST_LOG(...) _CONSOLE_LOG(__VA_ARGS__)
+#define TEST_LOG(...) \
+do { \
+    console::Console::getInstance().log(__VA_ARGS__); \
+} while(false)
 
 namespace console
 {
@@ -158,6 +179,11 @@ namespace console
          * @return Reference to this Console instance (for chaining)
          */
         Console &setBaudRate(unsigned long baudrate);
+
+        /**
+         * @brief Get buffered message
+         */
+        const char *getMessage() const;
 
         /**
          * @brief Append formatted text to the internal buffer

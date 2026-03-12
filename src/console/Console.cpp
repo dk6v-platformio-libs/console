@@ -41,7 +41,7 @@ namespace console
         return *this;
     }
 
-    Console &Console::setBaudRate(unsigned long baudrate)
+    Console& Console::setBaudRate(unsigned long baudrate)
     {
         this->baudrate = baudrate;
         if (serial)
@@ -49,6 +49,11 @@ namespace console
             serial->begin(this->baudrate);
         }
         return *this;
+    }
+
+    const char* Console::getMessage() const
+    {
+        return mBuffer;
     }
 
     void Console::log(const char *fmt, ...)
