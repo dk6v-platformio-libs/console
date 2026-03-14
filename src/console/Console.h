@@ -226,7 +226,7 @@ namespace console
     private:
         HardwareSerial *serial; // Pointer to serial port
         unsigned long baudrate; // Current baud rate
-        char mBuffer[96];       // Internal buffer for message building
+        char mBuffer[160];      // Internal buffer for message building
     };
 
     // Console wrapper functions

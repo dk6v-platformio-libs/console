@@ -52,7 +52,7 @@ void test_add_flush(void)
     TEST_LOG("--- TEST CASE: %s ---", __func__);
 
     {
-        char expected[120];
+        char expected[200];
         char* npos = expected;
         for (unsigned int ix = 0; ix < sizeof(expected) / 10; ++ix)
         {
@@ -67,11 +67,12 @@ void test_add_flush(void)
         LOGI_ADD(expected);
         LOGI_ADD(expected);
         LOGI_ADD(expected);
+        LOGI_ADD(expected);
         LOGI_FLUSH();
     }
 
     {
-        char expected[120];
+        char expected[200];
         char *npos = expected;
         for (unsigned int ix = 0; ix < sizeof(expected) / 10; ++ix)
         {
