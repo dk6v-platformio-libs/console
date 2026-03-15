@@ -36,34 +36,37 @@
 #define _LOG_TAG_2(level, module) "[" level "][" module "]"
 
 #define _LOG_TAG_SELECT(_1, _2, NAME, ...) NAME
-#define _LOG_TAG_EXPAND(level, ...) \
+#define _LOG_TAG_EXPAND(level, ...)                                           \
     _LOG_TAG_SELECT(level __VA_OPT__(, ) __VA_ARGS__, _LOG_TAG_2, _LOG_TAG_1) \
-                   (level __VA_OPT__(, ) __VA_ARGS__)
+    (level __VA_OPT__(, ) __VA_ARGS__)
 #define _LOG_TAG(level) _LOG_TAG_EXPAND(level, LOG_MODULE)
 
-#define LOG_LEVEL_ERROR_TAG   _LOG_TAG("E")
+#define LOG_LEVEL_ERROR_TAG _LOG_TAG("E")
 #define LOG_LEVEL_WARNING_TAG _LOG_TAG("W")
-#define LOG_LEVEL_INFO_TAG    _LOG_TAG("I")
-#define LOG_LEVEL_DEBUG_TAG   _LOG_TAG("D")
+#define LOG_LEVEL_INFO_TAG _LOG_TAG("I")
+#define LOG_LEVEL_DEBUG_TAG _LOG_TAG("D")
 #define LOG_LEVEL_VERBOSE_TAG _LOG_TAG("V")
 
-#define _CONSOLE_LOG(LOG_LEVEL, ...) \
-do { \
-    console::SyslogReporter::getInstance().send(LOG_LEVEL, LOG_LEVEL##_TAG, __VA_ARGS__); \
-    console::Console::getInstance().log(LOG_LEVEL##_TAG " ", __VA_ARGS__); \
-} while (false)
+#define _CONSOLE_LOG(LOG_LEVEL, ...)                                                          \
+    do                                                                                        \
+    {                                                                                         \
+        console::SyslogReporter::getInstance().send(LOG_LEVEL, LOG_LEVEL##_TAG, __VA_ARGS__); \
+        console::Console::getInstance().log(LOG_LEVEL##_TAG " ", __VA_ARGS__);                \
+    } while (false)
 
-#define _CONSOLE_FORMAT(LOG_LEVEL, ...) \
-do { \
-    console::Console::getInstance().format(__VA_ARGS__); \
-} while(false)
+#define _CONSOLE_FORMAT(LOG_LEVEL, ...)                      \
+    do                                                       \
+    {                                                        \
+        console::Console::getInstance().format(__VA_ARGS__); \
+    } while (false)
 
-#define _CONSOLE_FLUSH(LOG_LEVEL) \
-do { \
-    console::SyslogReporter::getInstance().send( \
-        LOG_LEVEL, LOG_LEVEL##_TAG, console::Console::getInstance().getMessage()); \
-    console::Console::getInstance().flush(LOG_LEVEL##_TAG " "); \
-} while(false)
+#define _CONSOLE_FLUSH(LOG_LEVEL)                                                      \
+    do                                                                                 \
+    {                                                                                  \
+        console::SyslogReporter::getInstance().send(                                   \
+            LOG_LEVEL, LOG_LEVEL##_TAG, console::Console::getInstance().getMessage()); \
+        console::Console::getInstance().flush(LOG_LEVEL##_TAG " ");                    \
+    } while (false)
 
 #define _TEST_LOG(...) console::Console::getInstance().log(__VA_ARGS__)
 
@@ -133,10 +136,11 @@ do { \
 
 // Test environment
 
-#define TEST_LOG(...) \
-do { \
-    console::Console::getInstance().log(nullptr, __VA_ARGS__); \
-} while(false)
+#define TEST_LOG(...)                                              \
+    do                                                             \
+    {                                                              \
+        console::Console::getInstance().log(nullptr, __VA_ARGS__); \
+    } while (false)
 
 namespace console
 {
@@ -150,7 +154,7 @@ namespace console
     {
     private:
         Console();
-        ~Console();
+        ~Console() = default;
 
         Console(Console const &) = delete;
         Console &operator=(Console const &) = delete;
@@ -165,6 +169,24 @@ namespace console
             static Console console;
             return console;
         }
+
+        /**
+         * @brief Enable logging
+         * @return Current logging state
+         */
+        bool enable();
+
+        /**
+         * @brief Disable logging
+         * @return Current logging state
+         */
+        bool disable();
+
+        /**
+         * @brief Restore previous logging state
+         * @return Current logging state
+         */
+        bool restore();
 
         /**
          * @brief Set the serial port for output
@@ -227,12 +249,18 @@ namespace console
         HardwareSerial *serial; // Pointer to serial port
         unsigned long baudrate; // Current baud rate
         char mBuffer[160];      // Internal buffer for message building
+
+        bool mEnabled;
+        bool mPreviousState;
     };
 
     // Console wrapper functions
 
-    Console& getInstance();
+    Console &getInstance();
 
+    bool enable();
+    bool disable();
+    bool restore();
     void log(const char *fmt, ...);
     void format(const char *fmt, ...);
     void flush(const char *prefix = "");

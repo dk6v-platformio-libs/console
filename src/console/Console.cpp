@@ -21,7 +21,8 @@ namespace console
 {
     Console::Console() : serial(&Serial),
                          baudrate(SERIAL_BAUD_RATE),
-                         mBuffer{0}
+                         mBuffer{0},
+                         mEnabled(true)
     {
         if (serial)
         {
@@ -29,11 +30,36 @@ namespace console
         }
     }
 
-    Console::~Console() {}
+    bool Console::enable()
+    {
+        mPreviousState = mEnabled;
+        mEnabled = true;
+
+        return mPreviousState;
+    }
+
+    bool Console::disable()
+    {
+        mPreviousState = mEnabled;
+        mEnabled = false;
+
+        return mPreviousState;
+    }
+
+    bool Console::restore()
+    {
+        bool previous = mEnabled;
+
+        mEnabled = mPreviousState;
+        mPreviousState = previous;
+
+        return previous;
+    }
 
     Console &Console::setSerial(HardwareSerial &serial)
     {
         this->serial = &serial;
+
         if (this->serial)
         {
             this->serial->begin(this->baudrate);
@@ -41,7 +67,7 @@ namespace console
         return *this;
     }
 
-    Console& Console::setBaudRate(unsigned long baudrate)
+    Console &Console::setBaudRate(unsigned long baudrate)
     {
         this->baudrate = baudrate;
         if (serial)
@@ -51,14 +77,15 @@ namespace console
         return *this;
     }
 
-    const char* Console::getMessage() const
+    const char *Console::getMessage() const
     {
         return mBuffer;
     }
 
     void Console::log(const char *tag, const char *fmt, ...)
     {
-        if (!serial) return;
+        if (!serial || !mEnabled)
+            return;
 
         va_list ptr;
         va_start(ptr, fmt);
@@ -70,7 +97,8 @@ namespace console
 
     void Console::format(const char *fmt, ...)
     {
-        if (!serial) return;
+        if (!serial)
+            return;
 
         size_t length = strlen(mBuffer);
         char *npos = mBuffer + length;
@@ -84,20 +112,26 @@ namespace console
 
     void Console::flush(const char *tag)
     {
-        if (!serial) return;
+        if (!serial)
+            return;
 
         if (strlen(mBuffer) > 0)
         {
-            serial->print((tag != nullptr) ? tag : "");
-            serial->println(mBuffer);
-            serial->flush();
+            if (mEnabled)
+            {
+                serial->print((tag != nullptr) ? tag : "");
+                serial->println(mBuffer);
+                serial->flush();
+            }
+
             mBuffer[0] = '\0';
         }
     }
 
     void Console::vformat(const char *fmt, va_list args)
     {
-        if (!serial) return;
+        if (!serial || !mEnabled)
+            return;
 
         size_t length = strlen(mBuffer);
         char *npos = mBuffer + length;
@@ -114,9 +148,24 @@ namespace console
 
     // Console wrapper functions
 
-    Console& getInstance()
+    Console &getInstance()
     {
         return console::Console::getInstance();
+    }
+
+    bool enable()
+    {
+        return console::Console::getInstance().enable();
+    }
+
+    bool disable()
+    {
+        return console::Console::getInstance().disable();
+    }
+
+    bool restore()
+    {
+        return console::Console::getInstance().restore();
     }
 
     void log(const char *fmt, ...)

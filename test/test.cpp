@@ -86,6 +86,80 @@ void test_add_flush(void)
     }
 }
 
+void test_enable_disable(void)
+{
+    TEST_LOG("--- TEST CASE: %s ---", __func__);
+
+    {
+        console::enable();
+        LOGI("enabled");
+    }
+
+    {
+        bool previous = console::enable();
+        TEST_ASSERT_TRUE(previous);
+        LOGI("enabled");
+    }
+
+    {
+        bool previous = console::disable();
+        TEST_ASSERT_TRUE(previous);
+        LOGI("disabled");
+    }
+
+    {
+        bool previous = console::enable();
+        TEST_ASSERT_FALSE(previous);
+        LOGI("enabled");
+    }
+
+    {
+        bool previous = console::disable();
+        TEST_ASSERT_TRUE(previous);
+        LOGI("disabled");
+    }
+
+    {
+        bool previous = console::disable();
+        TEST_ASSERT_FALSE(previous);
+        LOGI("disabled");
+    }
+
+    {
+        bool previous = console::enable();
+        TEST_ASSERT_FALSE(previous);
+        LOGI("enabled");
+    }
+}
+
+void test_enable_restore(void)
+{
+    TEST_LOG("--- TEST CASE: %s ---", __func__);
+
+    {
+        console::enable();
+        LOGI("enabled");
+    }
+
+    {
+        bool previous = console::disable();
+        TEST_ASSERT_TRUE(previous);
+        LOGI("enabled");
+    }
+
+    {
+        bool previous = console::restore();
+        TEST_ASSERT_FALSE(previous);
+        LOGI("enabled");
+    }
+
+    {
+        bool previous = console::restore();
+        TEST_ASSERT_TRUE(previous);
+        LOGI("disabled");
+    }
+}
+
 void setup()
 {
     Serial.begin(74880);
@@ -97,6 +171,8 @@ void setup()
     UNITY_BEGIN();
     RUN_TEST(test_basic);
     RUN_TEST(test_add_flush);
+    RUN_TEST(test_enable_disable);
+    RUN_TEST(test_enable_restore);
     UNITY_END();
 }
 
